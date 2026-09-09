@@ -3,6 +3,7 @@ package pl.pawelwieczorek.radpoint;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
+import pl.pawelwieczorek.radpoint.infrastructure.sqlite.TenantConnectionProvider;
 import pl.pawelwieczorek.radpoint.infrastructure.tenant.TenantResolver;
 
 import java.io.IOException;
@@ -12,66 +13,63 @@ import java.util.concurrent.Executors;
 
 public final class App {
 
-    private static final int PORT = 8080;
-    
-    private static final TenantResolver TENANT_RESOLVER = new TenantResolver();
+	private static final int PORT = 8080;
 
-    private App() {
-    }
+	private static final TenantResolver TENANT_RESOLVER = new TenantResolver();
 
-    public static void main(String[] args) throws IOException {
-        HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
+	private static final TenantConnectionProvider CONNECTION_PROVIDER = new TenantConnectionProvider();
 
-        server.createContext("/data", App::handleData);
-        server.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
+	private App() {
+	}
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("Stopping server...");
-            server.stop(0);
-        }));
+	public static void main(String[] args) throws IOException {
+		HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
 
-        server.start();
-        System.out.println("Server started at http://localhost:" + PORT);
-    }
+		server.createContext("/data", App::handleData);
+		server.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
 
-    private static void handleData(HttpExchange exchange) throws IOException {
-        try {
-            String tenantId = TENANT_RESOLVER.resolve(exchange.getRequestHeaders());
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+			System.out.println("Stopping server...");
+			CONNECTION_PROVIDER.close();
+			server.stop(0);
+		}));
 
-            String response = """
-                    {
-                      "tenantId": "%s",
-                      "message": "Tenant resolved successfully"
-                    }
-                    """.formatted(tenantId);
+		server.start();
+		System.out.println("Server started at http://localhost:" + PORT);
+	}
 
-            sendJson(exchange, 200, response);
-        } catch (IllegalArgumentException exception) {
-            String response = """
-                    {
-                      "error": "%s"
-                    }
-                    """.formatted(exception.getMessage());
+	private static void handleData(HttpExchange exchange) throws IOException {
+		try {
+			String tenantId = TENANT_RESOLVER.resolve(exchange.getRequestHeaders());
+			CONNECTION_PROVIDER.getConnection(tenantId);
 
-            sendJson(exchange, 400, response);
-        }
-    }
-    
-    private static void sendJson(
-            HttpExchange exchange,
-            int statusCode,
-            String response
-    ) throws IOException {
-        byte[] body = response.getBytes(StandardCharsets.UTF_8);
+			String response = """
+					{
+					  "tenantId": "%s",
+					  "message": "Tenant resolved successfully"
+					}
+					""".formatted(tenantId);
 
-        exchange.getResponseHeaders().set(
-                "Content-Type",
-                "application/json; charset=utf-8"
-        );
-        exchange.sendResponseHeaders(statusCode, body.length);
+			sendJson(exchange, 200, response);
+		} catch (IllegalArgumentException exception) {
+			String response = """
+					{
+					  "error": "%s"
+					}
+					""".formatted(exception.getMessage());
 
-        try (var output = exchange.getResponseBody()) {
-            output.write(body);
-        }
-    }
+			sendJson(exchange, 400, response);
+		}
+	}
+
+	private static void sendJson(HttpExchange exchange, int statusCode, String response) throws IOException {
+		byte[] body = response.getBytes(StandardCharsets.UTF_8);
+
+		exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
+		exchange.sendResponseHeaders(statusCode, body.length);
+
+		try (var output = exchange.getResponseBody()) {
+			output.write(body);
+		}
+	}
 }
