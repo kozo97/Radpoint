@@ -1,0 +1,13 @@
+.classpath
+.project
+.settings/
+
+target/
+
+tenants/*.db
+tenants/*.db-journal
+tenants/*.db-wal
+tenants/*.db-shm
+
+.DS_Store
+Thumbs.db
