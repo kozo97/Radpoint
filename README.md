@@ -2,34 +2,6 @@
 
 Zadanie rekrutacyjne Java + SQLite (multitenancy)
 
-## Technologie
-
-- Java 25
-- Maven
-- SQLite
-- JDBC
-- JUnit 5
-- Wbudowany `com.sun.net.httpserver.HttpServer`
-
-Projekt nie korzysta z frameworków ORM, takich jak Hibernate czy JPA.
-Dostęp do bazy danych odbywa się przez JDBC i bezpośrednie zapytania SQL.
-
-## Wymagania
-
-Przed uruchomieniem należy posiadać:
-
-- JDK 25,
-- Maven 3.9 lub nowszy,
-- Git, jeśli projekt jest pobierany z repozytorium.
-
-Sprawdzenie środowiska:
-
-```bash
-java -version
-mvn -version
-```
-
-Maven powinien korzystać z JDK 25.
 
 ## Budowanie projektu
 
@@ -98,117 +70,9 @@ src/
   tabeli oraz cache połączeń.
 - `App` tworzy zależności i uruchamia serwer HTTP.
 
-## Identyfikacja tenant-a
-
-Tenant może zostać wskazany na dwa sposoby.
-
-### Nagłówek `X-Tenant-ID`
-
-Nagłówek ma najwyższy priorytet:
-
-```text
-X-Tenant-ID: tenant1
-```
-
-Przykład:
-
-```bash
-curl.exe http://localhost:8080/data \
-  -H "X-Tenant-ID: tenant1"
-```
-
-### Nagłówek `Host`
-
-Aplikacja obsługuje format:
-
-```text
-<environment>.<tenant>.example.com
-```
-
-Przykład:
-
-```text
-dev.newco.example.com
-```
-
-W tym przypadku tenant-em jest:
-
-```text
-newco
-```
-
-Przykład:
-
-```bash
-curl.exe http://localhost:8080/data \
-  -H "Host: dev.newco.example.com"
-```
-
-Jeżeli jednocześnie podano `X-Tenant-ID` i `Host`, aplikacja używa
-wartości z `X-Tenant-ID`.
-
-## Walidacja tenant-a
-
-Identyfikator tenant-a:
-
-- musi mieć od 1 do 32 znaków,
-- może zawierać wyłącznie małe litery i cyfry `0-9`.
-
-Przykładowe poprawne wartości:
-
-```text
-tenant1
-newco
-company123
-```
-
-Przykładowe niepoprawne wartości:
-
-```text
-tenant-1
-tenant_1
-Tenant1
-../../secret
-```
-
-Ograniczenie zabezpiecza również nazwę ścieżki do bazy SQLite.
-
-## Bazy danych
-
-Dla każdego tenant-a tworzony jest osobny plik:
-
-```text
-tenants/<tenant-id>.db
-```
-
-Przykład:
-
-```text
-tenants/tenant1.db
-tenants/newco.db
-```
-
-Jeżeli baza nie istnieje, aplikacja:
-
-1. tworzy katalog `tenants/`,
-2. tworzy plik SQLite,
-3. tworzy bazę i tabelę `sample_data`, jeśli jeszcze nie istnieją,
-4. zapamiętuje połączenie w cache.
-
-Tabela jest tworzona za pomocą:
-
-```sql
-CREATE TABLE IF NOT EXISTS sample_data (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    value TEXT NOT NULL,
-    deleted INTEGER NOT NULL DEFAULT 0
-);
-```
-
-Połączenia są przechowywane w `ConcurrentHashMap`, dzięki czemu ta sama
-baza nie jest otwierana ponownie przy każdym żądaniu.
-
 ## Endpointy
+
+Endpointy były testowane za pomocą poniższych instrukcji poprzez PowerShella
 
 ### GET `/data`
 
@@ -275,62 +139,6 @@ Przykładowa odpowiedź:
 
 Rekord nie jest usuwany fizycznie. Jego kolumna `deleted` zostaje ustawiona
 na `1`, dlatego nie pojawia się później w odpowiedzi `GET /data`.
-
-## Test izolacji tenantów
-
-Dodaj dane dla dwóch tenantów:
-
-```bash
-curl.exe -X POST http://localhost:8080/data \
-  -H "X-Tenant-ID: tenant1" \
-  -H "Content-Type: application/json" \
-  -d "{\"value\":\"Dane tenant1\"}"
-```
-
-```bash
-curl.exe -X POST http://localhost:8080/data \
-  -H "X-Tenant-ID: tenant2" \
-  -H "Content-Type: application/json" \
-  -d "{\"value\":\"Dane tenant2\"}"
-```
-
-Następnie pobierz dane osobno:
-
-```bash
-curl.exe http://localhost:8080/data \
-  -H "X-Tenant-ID: tenant1"
-```
-
-```bash
-curl.exe http://localhost:8080/data \
-  -H "X-Tenant-ID: tenant2"
-```
-
-Każdy tenant powinien otrzymać wyłącznie swoje dane. W katalogu `tenants/`
-powinny powstać dwa niezależne pliki:
-
-```text
-tenants/
-├── tenant1.db
-└── tenant2.db
-```
-
-## Obsługa błędów
-
-Przykładowe błędy zwracane przez aplikację:
-
-- `400 Bad Request` — brak lub niepoprawny tenant,
-- `400 Bad Request` — niepoprawne body albo ID,
-- `404 Not Found` — nieistniejący endpoint lub rekord,
-- `500 Internal Server Error` — błąd wewnętrzny albo błąd SQLite.
-
-Odpowiedzi błędów mają format JSON:
-
-```json
-{
-  "error": "Invalid tenant ID."
-}
-```
 
 ## Przyjęte uproszczenia
 
