@@ -42,7 +42,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.5.0</version>
                 <configuration>
-                    <mainClass>pl.pawelwieczorek.multitenancy.Application</mainClass>
+                    <mainClass>pl.pawelwieczorek.radpoint.App</mainClass>
                 </configuration>
             </plugin>
         </plugins>
