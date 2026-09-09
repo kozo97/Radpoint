@@ -3,6 +3,9 @@ package pl.pawelwieczorek.radpoint;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
+import pl.pawelwieczorek.radpoint.application.SampleDataRepository;
+import pl.pawelwieczorek.radpoint.application.SampleDataService;
+import pl.pawelwieczorek.radpoint.infrastructure.sqlite.SqliteSampleDataRepository;
 import pl.pawelwieczorek.radpoint.infrastructure.sqlite.TenantConnectionProvider;
 import pl.pawelwieczorek.radpoint.infrastructure.tenant.TenantResolver;
 
@@ -18,6 +21,10 @@ public final class App {
 	private static final TenantResolver TENANT_RESOLVER = new TenantResolver();
 
 	private static final TenantConnectionProvider CONNECTION_PROVIDER = new TenantConnectionProvider();
+
+	private static final SampleDataRepository REPOSITORY = new SqliteSampleDataRepository(CONNECTION_PROVIDER);
+
+	private static final SampleDataService SERVICE = new SampleDataService(REPOSITORY);
 
 	private App() {
 	}
