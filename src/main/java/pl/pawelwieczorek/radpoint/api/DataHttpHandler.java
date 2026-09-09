@@ -3,6 +3,7 @@ package pl.pawelwieczorek.radpoint.api;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -50,17 +51,13 @@ public final class DataHttpHandler implements HttpHandler {
                 return;
             }
 
-            sendJson(exchange, 404, """
-                    {"error":"Endpoint not found"}
-                    """);
+            sendJson(exchange, 404, toJson(Map.of("error", "Endpoint not found")));
 
         } catch (IllegalArgumentException exception) {
-            sendJson(exchange, 400, jsonError(exception.getMessage()));
+            sendJson(exchange, 400, toJson(Map.of("error", exception.getMessage())));
         } catch (Exception exception) {
             exception.printStackTrace();
-            sendJson(exchange, 500, """
-                    {"error":"Internal server error"}
-                    """);
+            sendJson(exchange, 500, toJson(Map.of("error", "Internal server error")));
         }
     }
 
@@ -151,50 +148,16 @@ public final class DataHttpHandler implements HttpHandler {
             );
         }
     }
-
-    private String toJson(List<SampleData> data) {
-        StringBuilder json = new StringBuilder("[");
-        boolean first = true;
-
-        for (SampleData item : data) {
-            if (!first) {
-                json.append(",");
-            }
-
-            json.append("""
-                    {"id":%d,"value":"%s"}
-                    """.formatted(
-                    item.id(),
-                    escapeJson(item.value())
-            ).trim());
-
-            first = false;
+    
+    private String toJson(Object value) {
+        try {
+            return OBJECT_MAPPER.writeValueAsString(value);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException(
+                    "Could not serialize JSON response.",
+                    exception
+            );
         }
-
-        return json.append("]").toString();
-    }
-
-    private String toJson(SampleData item) {
-        return """
-                {"id":%d,"value":"%s"}
-                """.formatted(
-                item.id(),
-                escapeJson(item.value())
-        ).trim();
-    }
-
-    private String jsonError(String message) {
-        return """
-                {"error":"%s"}
-                """.formatted(escapeJson(message)).trim();
-    }
-
-    private String escapeJson(String value) {
-        return value
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\r", "\\r")
-                .replace("\n", "\\n");
     }
 
     private void sendJson(
