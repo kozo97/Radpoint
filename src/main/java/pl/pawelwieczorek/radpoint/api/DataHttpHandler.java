@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
@@ -12,7 +15,9 @@ import pl.pawelwieczorek.radpoint.domain.SampleData;
 import pl.pawelwieczorek.radpoint.infrastructure.tenant.TenantResolver;
 
 public final class DataHttpHandler implements HttpHandler {
-
+	
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    
     private final TenantResolver tenantResolver;
     private final SampleDataService service;
 
@@ -113,26 +118,38 @@ public final class DataHttpHandler implements HttpHandler {
     }
 
     private String extractValue(String requestBody) {
-        String prefix = "{\"value\":\"";
-        String suffix = "\"}";
+        try {
+            JsonNode root = OBJECT_MAPPER.readTree(requestBody);
 
-        if (!requestBody.startsWith(prefix)
-                || !requestBody.endsWith(suffix)) {
+            if (root == null || !root.isObject()) {
+                throw new IllegalArgumentException(
+                        "Request body must be a JSON object."
+                );
+            }
+
+            JsonNode valueNode = root.get("value");
+
+            if (valueNode == null || !valueNode.isTextual()) {
+                throw new IllegalArgumentException(
+                        "Request body must contain a text field: value."
+                );
+            }
+
+            String value = valueNode.asText().trim();
+
+            if (value.isBlank()) {
+                throw new IllegalArgumentException(
+                        "Value must not be blank."
+                );
+            }
+
+            return value;
+        } catch (JsonProcessingException exception) {
             throw new IllegalArgumentException(
-                    "Request body must have format: {\"value\":\"...\"}"
+                    "Request body must contain valid JSON.",
+                    exception
             );
         }
-
-        String value = requestBody.substring(
-                prefix.length(),
-                requestBody.length() - suffix.length()
-        );
-
-        if (value.isBlank()) {
-            throw new IllegalArgumentException("Value must not be blank.");
-        }
-
-        return value;
     }
 
     private String toJson(List<SampleData> data) {
