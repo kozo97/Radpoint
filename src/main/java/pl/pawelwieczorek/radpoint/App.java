@@ -3,6 +3,8 @@ package pl.pawelwieczorek.radpoint;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
+import pl.pawelwieczorek.radpoint.infrastructure.tenant.TenantResolver;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -11,6 +13,8 @@ import java.util.concurrent.Executors;
 public final class App {
 
     private static final int PORT = 8080;
+    
+    private static final TenantResolver TENANT_RESOLVER = new TenantResolver();
 
     private App() {
     }
@@ -31,17 +35,43 @@ public final class App {
     }
 
     private static void handleData(HttpExchange exchange) throws IOException {
-        String response = """
-                {
-                  "message": "Radpoint service is running"
-                }
-                """;
+        try {
+            String tenantId = TENANT_RESOLVER.resolve(exchange.getRequestHeaders());
 
-        exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
-        exchange.sendResponseHeaders(200, response.getBytes(StandardCharsets.UTF_8).length);
+            String response = """
+                    {
+                      "tenantId": "%s",
+                      "message": "Tenant resolved successfully"
+                    }
+                    """.formatted(tenantId);
+
+            sendJson(exchange, 200, response);
+        } catch (IllegalArgumentException exception) {
+            String response = """
+                    {
+                      "error": "%s"
+                    }
+                    """.formatted(exception.getMessage());
+
+            sendJson(exchange, 400, response);
+        }
+    }
+    
+    private static void sendJson(
+            HttpExchange exchange,
+            int statusCode,
+            String response
+    ) throws IOException {
+        byte[] body = response.getBytes(StandardCharsets.UTF_8);
+
+        exchange.getResponseHeaders().set(
+                "Content-Type",
+                "application/json; charset=utf-8"
+        );
+        exchange.sendResponseHeaders(statusCode, body.length);
 
         try (var output = exchange.getResponseBody()) {
-            output.write(response.getBytes(StandardCharsets.UTF_8));
+            output.write(body);
         }
     }
 }
