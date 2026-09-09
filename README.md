@@ -70,75 +70,12 @@ src/
   tabeli oraz cache połączeń.
 - `App` tworzy zależności i uruchamia serwer HTTP.
 
-## Endpointy
+## Testowanie
 
-Endpointy były testowane za pomocą poniższych instrukcji poprzez PowerShella
-
-### GET `/data`
-
-Zwraca aktywne dane bieżącego tenant-a.
-
-```bash
-curl.exe http://localhost:8080/data \
-  -H "X-Tenant-ID: tenant1"
-```
-
-Przykładowa odpowiedź:
-
-```json
-[
-  {
-    "id": 1,
-    "value": "Pierwszy rekord"
-  }
-]
-```
-
-Jeżeli tenant nie ma rekordów:
-
-```json
-[]
-```
-
-### POST `/data`
-
-Dodaje rekord do bazy bieżącego tenant-a.
-
-```bash
-curl.exe -X POST http://localhost:8080/data \
-  -H "X-Tenant-ID: tenant1" \
-  -H "Content-Type: application/json" \
-  -d "{\"value\":\"Pierwszy rekord\"}"
-```
-
-Przykładowa odpowiedź:
-
-```json
-{
-  "id": 1,
-  "value": "Pierwszy rekord"
-}
-```
-
-### DELETE `/data/{id}`
-
-Wykonuje soft delete rekordu.
-
-```bash
-curl.exe -X DELETE http://localhost:8080/data/1 \
-  -H "X-Tenant-ID: tenant1"
-```
-
-Przykładowa odpowiedź:
-
-```json
-{
-  "deleted": true
-}
-```
-
-Rekord nie jest usuwany fizycznie. Jego kolumna `deleted` zostaje ustawiona
-na `1`, dlatego nie pojawia się później w odpowiedzi `GET /data`.
+Endpoint `GET /data` został początkowo przetestowany z poziomu PowerShella.
+Ze względu na problemy z przekazywaniem body JSON w PowerShellu, pozostałe testy
+zostały wykonane w Postmanie, który ułatwia wysyłanie żądań HTTP z nagłówkami
+oraz body w formacie JSON.
 
 ## Przyjęte uproszczenia
 
