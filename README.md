@@ -5,7 +5,7 @@ Zadanie rekrutacyjne Java + SQLite (multitenancy)
 
 ## Budowanie projektu
 
-Aby wyczyścić poprzedni build i skompilować projekt, wykonaj:
+Aby wyczyścić poprzedni build i skompilować projekt, wykonaj polecenia w katalogu projektu:
 
 ```bash
 mvn clean install
