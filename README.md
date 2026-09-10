@@ -16,7 +16,7 @@ mvn clean install
 Po poprawnym zakończeniu budowania uruchom serwer:
 
 ```bash
-mvn exec:java
+mvn -B exec:java
 ```
 
 Alternatywnie, podczas pracy w Eclipse można uruchomić klasę:
