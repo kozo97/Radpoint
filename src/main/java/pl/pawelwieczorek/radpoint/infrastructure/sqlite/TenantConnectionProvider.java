@@ -25,6 +25,17 @@ public final class TenantConnectionProvider implements AutoCloseable {
 
     private final Map<String, Connection> connections = new ConcurrentHashMap<>();
 
+    public TenantConnectionProvider() {
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException exception) {
+            throw new IllegalStateException(
+                    "SQLite JDBC driver is missing from the application classpath.",
+                    exception
+            );
+        }
+    }
+
     public Connection getConnection(String tenantId) {
         return connections.computeIfAbsent(tenantId, this::openAndInitialize);
     }
